@@ -1,0 +1,142 @@
+---
+title: "Evidencia 1"
+author: "Carlos Ivan Fonseca Mondragón"
+mat: "A01771689"
+output: html_notebook
+---
+
+Antecedentes del Reto
+
+En mayo del 2023, la OMS declaró de manera oficial el término de la emergencia global por parte del COVID-19, puesto a que ya no se considera como una situación crítica, en nuestro país, para julio del 2022, se reportó un estimado de 71.29% de mexiquenses completamente vacunados, dentro del Estado de México, en Marzo del 2022, se habían contabilizado un total de 491,221 casos, donde un 7.03% resultó en una defunción, dentro de mi localidad, los datos más recientes datan abril 2022, en donde a pesar de que solamente se presentaron 480 casos de manera oficial, un 24.37% de estas personas fallecieron.
+
+La primera variante del virus que se propagó a nivel mundial fue la variante denominada SARS-CoV-2, la cual se detectó por primera vez en la ciudad de Wuhan, China, a finales del año 2019. Conforme este virus se fue expandiendo en todo el mundo, fueron surgiendo nuevas mutaciones rápidamente.
+
+Actualmente, se han identificado diversas variantes preocupantes en distintas regiones del mundo, algunas de las más relevantes son: "Alfa" B.1.1.7, descubierta inicialmente en el Reino Unido a finales del 2020, la variante "Delta" B.1.617.2, la variante "Ómicron" B.1.1.529, que apareció por primera vez en Sudáfrica en Noviembre del 2021.
+
+Refierendose a la búsqueda de información acerca de las variantes del virus en México, existen diversas fuentes confiables para hacerlo. Por ejemplo, es posible consultar el sitio web de la Secretaría de Salud de México, la cual ofrece datos actualizados hasta mediados del 2022 sobre la situación epidemiológica del país y las variantes del virus identificadas.
+
+Si me encontrara en la situación del médico Li Wenliang, intentaría reportar la situación a una universidad u otro centro de investigación, donde sean capaces de garantizar la confidencialidad a fin de evitar problemas con el gobierno.
+
+<!-- Inicio del programa -->
+
+```{r Load packges}
+library(seqinr)
+library(adegenet)
+library(ape)
+library(ggtree)
+library(DECIPHER)
+library(viridis)
+library(ggplot2)
+library(phytools)
+```
+
+```{r}
+variantes_Sars <- c('epsilon', 'omicron', 'zeta')
+
+epsilon <- readDNAStringSet("/Users/krlos/Documents/TEC/2do/Entrega1/epsilon.fasta", format="fasta")
+omicron <- readDNAStringSet("/Users/krlos/Documents/TEC/2do/Entrega1/omicron.fasta", format="fasta")
+zeta <- readDNAStringSet("/Users/krlos/Documents/TEC/2do/Entrega1/zeta.fasta", format="fasta")
+
+```
+
+<!-- Longitud de la secuencia -->
+```{r}
+
+calc_seq_size <- function(sequence) {
+  i <- 1
+  c <- 0
+  while(!(is.na(sequence[i]))){
+    c <- c + 1
+    i <- i + 1
+  }
+  return(c)
+}
+```
+
+<!-- Forward2Complementary -->
+```{r}
+f2c <- function(f_strand) {
+  c_strand <- c("3'-")
+  for(i in 1:length(f_strand)){
+    new_base <- switch(f_strand[i], "T"="A", "A"="T", "C"="G", "G"="C")
+    c_strand <- append(c_strand, new_base)
+  }
+  c_strand <- append(c_strand, "-5'")
+  return(c_strand)
+}
+```
+
+<!-- Calculando el porcentaje -->
+```{r}
+calc_base_percentage <- function(sequence) {
+  cuenta_A <- 0
+  cuenta_G <- 0
+  cuenta_C <- 0
+  cuenta_T <- 0
+  for(i in 1:length(sequence)){
+    switch(sequence[i],
+           'A' = {cuenta_A <- cuenta_A+1}, 
+           'G' = {cuenta_G <- cuenta_G+1},
+           'C' = {cuenta_C <- cuenta_C+1}, 
+           'T' = {cuenta_T <- cuenta_T+1})
+  }
+  cat(paste("Porcentaje de A = ", cuenta_A / length(sequence)*100)) 
+  cat("\n")
+  cat(paste("Porcentaje de G = ", cuenta_G / length(sequence)*100)) 
+  cat("\n")
+  cat(paste("Porcentaje de C= ", cuenta_C/length(sequence)*100)) 
+  cat("\n")
+  cat(paste("Porcentaje de T= ", cuenta_T/length(sequence)*100))
+  cat("\n")
+  cat(paste("Porcentaje GC = ", (cuenta_G+cuenta_C) / (length(sequence)) * 100), "%")
+}
+```
+
+
+```{r}
+for(segment in variantes_Sars){
+  cat("                       ")
+  cat("\n")
+  cat(segment)
+  file_path <- paste("/Users/krlos/Documents/TEC/2do/Entrega1/", segment, ".fasta", sep="")
+  dna_seq <- unlist(strsplit(toString(read.fasta(file_path, seqonly = 1)), ""))
+  complemento_adn <- (f2c(dna_seq))
+  cat("\n")
+  cat(paste(calc_seq_size(dna_seq), "Pares de bases"))
+  cat("\n")
+  cat(calc_base_percentage(append(dna_seq, complemento_adn)))
+  cat("\n")
+  cat(paste("5'-", paste(dna_seq, collapse=""), "-3'", sep=""))
+  cat("\n")
+  cat(paste(complemento_adn,collapse=""))
+}
+```
+  
+  <!-- Combinar todas las secuencias -->
+```{r}
+combinados <- DNAStringSet(c(epsilon,omicron,zeta))
+secuenciaFinal <- OrientNucleotides(combinados)
+alineados <- AlignSeqs(secuenciaFinal)
+
+```
+
+<!-- Mostrar en navegador -->
+
+```{r}
+BrowseSeqs(alineados, highlight=0)
+writeXStringSet(alineados,file="variantes_aligned.fasta")
+adn_alineado <- read.alignment("variantes_aligned.fasta", format ="fasta")
+Dist<- dist.alignment(adn_alineado, matrix = "similarity")
+arbol_filogenetico <- nj(Dist)
+plot(arbol_filogenetico, cex = 0.6)
+title("SARS-CoV-2: Similitud entre variantes")
+```
+
+```{r}
+tre <- nj(Dist)
+tre <- ladderize(tre)
+plot(tre, type="fan", cex = 0.6)
+title("Similarity in viruses genomes")
+```
+
+Podemos observar que cada variante tiene un origen lo suficientemente distinto para no relacionarse entre si con las demás, quizas si se analizaran más cepas de este virus, seríamos capaces de llamar más parentezcos entre estas.
